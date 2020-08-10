@@ -64,12 +64,12 @@ const init = async () => {
       console.log(`New block received. Block # ${block.number}`);
 
       const response = await fetch(`https://api.kyber.network/quote_amount?base=${addresses.tokens.eth}&quote=${addresses.tokens.dai}&base_amount=${AMOUNT_ETH}&type=sell&platformFee=8`)
-      const buy = await response.json();
-      const kyberBuy = (buy.data / 100);
+      const sell = await response.json();
+      const kyberSell = (sell.data / 100);
 
       const response2 = await fetch(`https://api.kyber.network/quote_amount?base=${addresses.tokens.eth}&quote=${addresses.tokens.dai}&base_amount=${AMOUNT_ETH}&type=buy&platformFee=8`)
-      const sell = await response2.json();
-      const kyberSell = (sell.data / 100);
+      const buy = await response2.json();
+      const kyberBuy = (buy.data / 100);
     
       const kyberRates = {
         buy: parseFloat(kyberBuy),
