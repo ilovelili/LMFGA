@@ -31,6 +31,21 @@ const init = async () => {
     Flashloan.abi,
     Flashloan.networks[networkId].address
   );
+  
+  let ethPrice;
+  const updateEthPrice = async () => {
+    const results = await kyber
+      .methods
+      .getExpectedRate(
+        '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee', 
+        addresses.tokens.dai, 
+        1
+      )
+      .call();
+    ethPrice = web3.utils.toBN('1').mul(web3.utils.toBN(results.expectedRate)).div(ONE_WEI);
+  }
+  await updateEthPrice();
+  setInterval(updateEthPrice, 15000);
 
   const [dai, weth] = await Promise.all(
     [addresses.tokens.dai, addresses.tokens.weth].map(tokenAddress => (
@@ -86,9 +101,9 @@ const init = async () => {
       ]);
       const txCost1 = parseInt(gasCost1) * parseInt(gasPrice);
       const txCost2 = parseInt(gasCost2) * parseInt(gasPrice);
-      const currentEthPrice = (uniswapRates.buy + uniswapRates.sell) / 2; 
-      const profit1 = (parseInt(AMOUNT_ETH_WEI) / 10 ** 18) * (uniswapRates.sell - kyberBuy) - (txCost1 / 10 ** 18) * currentEthPrice;
-      const profit2 = (parseInt(AMOUNT_ETH_WEI) / 10 ** 18) * (kyberSell - uniswapRates.buy) - (txCost2 / 10 ** 18) * currentEthPrice;
+       
+      const profit1 = (parseInt(AMOUNT_ETH_WEI) / 10 ** 18) * (uniswapRates.sell - kyberBuy) - (txCost1 / 10 ** 18) * ethPrice;
+      const profit2 = (parseInt(AMOUNT_ETH_WEI) / 10 ** 18) * (kyberSell - uniswapRates.buy) - (txCost2 / 10 ** 18) * ethPrice;
       if(profit1 > 0) {
         console.log('Arb opportunity found!');
         console.log(`Buy ETH on Kyber at ${kyberBuy} dai`);
