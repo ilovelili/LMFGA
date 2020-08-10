@@ -4,6 +4,7 @@ const { ChainId, Token, TokenAmount, Pair } = require('@uniswap/sdk');
 const abis = require('./abis');
 const { mainnet: addresses } = require('./addresses');
 const Flashloan = require('./build/contracts/Flashloan.json');
+const fetch = require('node-fetch');
 
 const web3 = new Web3(
   new Web3.providers.WebsocketProvider(process.env.INFURA_URL)
