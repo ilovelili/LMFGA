@@ -1,6 +1,7 @@
 require("dotenv").config()
 const Web3 = require('web3');
-const { ChainId, Token, TokenAmount, Pair } = require('@uniswap/sdk');
+const chalk = require('chalk');
+const { ChainId, Token, TokenAmount, Fetcher, Route, Trade, TradeType } = require('@uniswap/sdk');
 const abis = require('./abis');
 const { mainnet: addresses } = require('./addresses');
 const Flashloan = require('./build/contracts/Flashloan.json');
@@ -16,10 +17,11 @@ const kyber = new web3.eth.Contract(
   addresses.kyber.kyberNetworkProxy
 );
 
-const AMOUNT_ETH = 100;
-const RECENT_ETH_PRICE = 230;
+const AMOUNT_ETH = 1;
+const RECENT_ETH_PRICE = 400;
 const AMOUNT_ETH_WEI = web3.utils.toWei(AMOUNT_ETH.toString());
 const AMOUNT_DAI_WEI = web3.utils.toWei((AMOUNT_ETH * RECENT_ETH_PRICE).toString());
+const ONE_WEI = web3.utils.toBN(web3.utils.toWei("1"));
 const DIRECTION = {
   KYBER_TO_UNISWAP: 0,
   UNISWAP_TO_KYBER: 1
@@ -42,7 +44,9 @@ const init = async () => {
         1
       )
       .call();
-    ethPrice = web3.utils.toBN('1').mul(web3.utils.toBN(results.expectedRate)).div(ONE_WEI);
+     ethPrice = web3.utils.toBN('1').mul(web3.utils.toBN(results.expectedRate)).div(ONE_WEI);
+    //ethPrice = web3.utils.toBN('1').mul(web3.utils.toBN(results.expectedRate));
+    // var temp = web3.utils.ONE_WEI;
   }
   await updateEthPrice();
   setInterval(updateEthPrice, 15000);
@@ -54,10 +58,14 @@ const init = async () => {
         tokenAddress,
       )
   )));
-  const daiWeth = await Pair.fetchData(
+  const daiWeth = await Fetcher.fetchPairData(
     dai,
-    weth,
+    weth[dai.ChainId],
   );
+  
+  const sellRoute = new Route([daiweth], weth[dai.ChainId]);
+  const buyRoute = new Route([daiweth], dai);
+
 
   web3.eth.subscribe('newBlockHeaders')
     .on('data', async block => {
@@ -78,8 +86,8 @@ const init = async () => {
       console.log('Kyber ETH/DAI');
       console.log(kyberRates);
       const uniswapResults = await Promise.all([
-        daiWeth.getOutputAmount(new TokenAmount(dai, AMOUNT_DAI_WEI)),
-        daiWeth.getOutputAmount(new TokenAmount(weth, AMOUNT_ETH_WEI))
+        new Trade(buyRoute, new TokenAmount(dai, AMOUNT_DAI_WEI), TradeType.EXACT_INPUT),
+        new Trade(sellRoute, new TokenAmount(weth[dai.ChainId], AMOUNT_ETH_WEI), TradeType.EXACT_INPUT)
       ]);
       const uniswapRates = {
         buy: parseFloat( AMOUNT_DAI_WEI / (uniswapResults[0][0].toExact() * 10 ** 18)),
@@ -94,11 +102,17 @@ const init = async () => {
         AMOUNT_DAI_WEI,
         DIRECTION[direction]
       ));
-      const [gasPrice, gasCost1, gasCost2] = await Promise.all([
-        web3.eth.getGasPrice(),
-        tx1.estimateGas({from: admin}),
-        tx2.estimateGas({from: admin})
-      ]);
+      //const [gasPrice, gasCost1, gasCost2] = await Promise.all([
+      //  web3.eth.getGasPrice(),
+      //  tx1.estimateGas({from: admin}),
+      //  tx2.estimateGas({from: admin})
+      //]);
+      const tempGas = await web3.eth.getGasPrice();//.then(console.log);
+      const tempIntGas = (parseInt(tempGas) + 10000000000);// add 10 GWEI
+      gasPrice = tempIntGas.toString();
+      
+      const gasCost1=1000000;//await web3.eth.estimateGas({from: admin});
+      const gasCost2=1000000;
       const txCost1 = parseInt(gasCost1) * parseInt(gasPrice);
       const txCost2 = parseInt(gasCost2) * parseInt(gasPrice);
        
@@ -117,8 +131,8 @@ const init = async () => {
           gas: gasCost1,
           gasPrice
         };
-        const receipt = await web3.eth.sendTransaction(txData);
-        console.log(`Transaction hash: ${receipt.transactionHash}`);
+       // const receipt = await web3.eth.sendTransaction(txData);
+       // console.log(`Transaction hash: ${receipt.transactionHash}`);
       } else if(profit2 > 0) {
         console.log('Arb opportunity found!');
         console.log(`Buy ETH from Uniswap at ${uniswapRates.buy} dai`);
@@ -132,8 +146,8 @@ const init = async () => {
           gas: gasCost2,
           gasPrice
         };
-        const receipt = await web3.eth.sendTransaction(txData);
-        console.log(`Transaction hash: ${receipt.transactionHash}`);
+       // const receipt = await web3.eth.sendTransaction(txData);
+       // console.log(`Transaction hash: ${receipt.transactionHash}`);
       }
     })
     .on('error', error => {
