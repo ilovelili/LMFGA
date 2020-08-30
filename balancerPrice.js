@@ -80,7 +80,7 @@ async function pricebuysell () {
         }
     }
     
-    var slippage1 = slip1 / slip.length;  
+    var slippage1 = slip1 / slip1.length;  
     const price1 = (totalOutput1.c[0].toString()); 
     const price = (totalOutput.c[0].toString());    
     
