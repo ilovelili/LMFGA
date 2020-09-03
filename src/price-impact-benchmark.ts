@@ -1,5 +1,6 @@
 import {Price, Action} from "./price";
-import {ethers} from "ethers";
+import {ethers, providers} from "ethers";
+import {Util} from "./util";
 
 const createCsvWriter = require("csv-writer").createObjectCsvWriter;
 const csvWriter = createCsvWriter({
@@ -22,7 +23,7 @@ const max = 100;
 const records: Record[] = [];
 
 const main = async () => {
-  const provider = new ethers.providers.InfuraProvider("mainnet");
+  const provider = new ethers.providers.InfuraProvider("homestead", Util.Env.apiKey);
   const amounts = Array.from(Array(max - min + 1), (_, i) => i + 1);
 
   for (let amount_eth = min; amount_eth <= amounts.length; amount_eth++) {
@@ -54,7 +55,6 @@ const main = async () => {
         time: now,
       });
     } catch (e) {
-      // retry this loop. usually the error is caused by `failed to meet quorum`
       amount_eth--;
     }
 

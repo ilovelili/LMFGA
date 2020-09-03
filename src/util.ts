@@ -17,6 +17,7 @@ export class Util {
   };
 
   static Env = class {
+    static apiKey = process.env.API_KEY || "";
     static infuraUri = process.env.INFURA_URI || "";
     static privKey = process.env.PRIVATE_KEY || "";
     static mongodb_pwd = process.env.MONGODB_PASSWORD || "";
