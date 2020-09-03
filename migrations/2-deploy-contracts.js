@@ -7,7 +7,7 @@ module.exports = function(deployer, _network, [beneficiaryAddress, _]) {
     addresses.kyber.kyberNetworkProxy,
     addresses.uniswap.router,
     addresses.tokens.weth,
-    addresses.tokens.dai,
+    addresses.tokens.usdc,
     beneficiaryAddress
   );
 };
