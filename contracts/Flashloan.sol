@@ -16,15 +16,21 @@ import './IWeth.sol';
 
 contract Flashloan is ICallee, DydxFlashloanBase {
     enum Direction { KyberToUniswap, UniswapToKyber, KyberTokenUniswap, UniswapTokenKyber } 
+    enum Tokenone { USDC, DAI, WETH }
     enum Tokentwo { BAT, KNC, LEND, LINK, MKR, SUSD }
+    
     struct ArbInfo {
         Direction direction;
+        Tokenone tokenone;
         Tokentwo tokentwo;
+
         uint repayAmount;
     }
 
     event NewArbitrage (
       Direction direction,
+      Tokenone tokenone,
+      Tokentwo tokentwo,
       uint profit,
       uint date
     );
@@ -32,28 +38,27 @@ contract Flashloan is ICallee, DydxFlashloanBase {
     IKyberNetworkProxy kyber;
     IUniswapV2Router02 uniswap;
     IWeth weth;
-    IERC20 token;
+    IERC20 public token;
+    IERC20 public token2;
     address beneficiary;
     address constant KYBER_ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address constant BAT_ADDRESS = 0x0D8775F648430679A709E98d2b0Cb6250d2887EF;
-    address constant KNC_ADDRESS = 0xdd974D5C2e2928deA5F71b9825b8b646686BD200;
+    address constant KNC_ADDRESS = 0xad67cB4d63C9da94AcA37fDF2761AaDF780ff4a2;
     address constant LEND_ADDRESS = 0x80fB784B7eD66730e8b1DBd9820aFD29931aab03;
     address constant LINK_ADDRESS = 0x514910771AF9Ca656af840dff83E8264EcF986CA;
-    address constant MKR_ADDRESS = 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2;
+    address constant MKR_ADDRESS = 0xAaF64BFCC32d0F15873a02163e7E500671a4ffcD;
     address constant SUSD_ADDRESS = 0x57Ab1ec28D129707052df4dF418D58a2D46d5f51;
-    
-
+    address constant DAI_ADDRESS = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address constant USDC_ADDRESS = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
+    address constant WETH_ADDRESS = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     constructor(
         address kyberAddress,
         address uniswapAddress,
-        address wethAddress,
-        address tokenAddress,
         address beneficiaryAddress
     ) public {
       kyber = IKyberNetworkProxy(kyberAddress);
       uniswap = IUniswapV2Router02(uniswapAddress);
-      weth = IWeth(wethAddress);
-      token = IERC20(tokenAddress);  //usdc or dai or possibly weth   needs change to work
+      weth = IWeth(WETH_ADDRESS);
       beneficiary = beneficiaryAddress;
     }
 
@@ -66,11 +71,14 @@ contract Flashloan is ICallee, DydxFlashloanBase {
         ArbInfo memory arbInfo = abi.decode(data, (ArbInfo));
         uint256 balanceToken = token.balanceOf(address(this));
        
-        require(
-            balanceToken >= arbInfo.repayAmount,
-            "Not enough funds to repay dydx loan!"
-        );
-        IERC20 token2;     // will it remember ?? on next run 
+        if (arbInfo.tokenone == Tokenone.USDC) {
+          token = IERC20(USDC_ADDRESS);
+          } if (arbInfo.tokenone == Tokenone.DAI) {
+          token = IERC20(DAI_ADDRESS); 
+          } if (arbInfo.tokenone == Tokenone.WETH) {
+          token = IERC20(WETH_ADDRESS);
+        }
+         
 
         if (arbInfo.tokentwo == Tokentwo.BAT) {
           token2 = IERC20(BAT_ADDRESS);
@@ -82,8 +90,8 @@ contract Flashloan is ICallee, DydxFlashloanBase {
           token2 = IERC20(LINK_ADDRESS); 
           } if (arbInfo.tokentwo == Tokentwo.MKR) {
           token2 = IERC20(MKR_ADDRESS);
-          } else token2 = IERC20(SUSD_ADDRESS);
-          
+          } else { token2 = IERC20(SUSD_ADDRESS);
+          }  
         
         uint256 balanceToken2 = token2.balanceOf(address(this));
 
@@ -201,13 +209,14 @@ contract Flashloan is ICallee, DydxFlashloanBase {
 
         uint profit = token.balanceOf(address(this)) - arbInfo.repayAmount; 
         token.transfer(beneficiary, profit);
-        emit NewArbitrage(arbInfo.direction, profit, now);
+        emit NewArbitrage(arbInfo.direction,arbInfo.tokenone, arbInfo.tokentwo, profit, now);
     }
 
     function initiateFlashloan(
       address _solo, 
       address _token,         // injecting the proper address to flashloan (dai,usdc,weth)   no need for another enum
-      uint256 _amount,
+      uint256 _amount, 
+      Tokenone _tokenone,
       Tokentwo _tokentwo,      //from enum for coins   BAT, KNC, LEND, LINK, MKR, SUSD
       Direction _direction)    // added new directions  KyberTokenUniswap and UniswapTokenKyber
         external
@@ -230,7 +239,7 @@ contract Flashloan is ICallee, DydxFlashloanBase {
         operations[0] = _getWithdrawAction(marketId, _amount);
         operations[1] = _getCallAction(
             // Encode MyCustomData for callFunction
-            abi.encode(ArbInfo({direction: _direction, tokentwo: _tokentwo, repayAmount: repayAmount}))
+            abi.encode(ArbInfo({direction: _direction, tokenone: _tokenone, tokentwo: _tokentwo, repayAmount: repayAmount}))
         );
         operations[2] = _getDepositAction(marketId, repayAmount);
 
