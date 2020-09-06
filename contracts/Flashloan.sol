@@ -23,7 +23,6 @@ contract Flashloan is ICallee, DydxFlashloanBase {
         Direction direction;
         Tokenone tokenone;
         Tokentwo tokentwo;
-
         uint repayAmount;
     }
 
@@ -37,16 +36,16 @@ contract Flashloan is ICallee, DydxFlashloanBase {
 
     IKyberNetworkProxy kyber;
     IUniswapV2Router02 uniswap;
-    IWeth weth;
+    IWeth weth;  // doesn't play nice yet   i think this is used 
     IERC20 public token;
     IERC20 public token2;
     address beneficiary;
     address constant KYBER_ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address constant BAT_ADDRESS = 0x0D8775F648430679A709E98d2b0Cb6250d2887EF;
-    address constant KNC_ADDRESS = 0xad67cB4d63C9da94AcA37fDF2761AaDF780ff4a2;
+    address constant KNC_ADDRESS = 0xdd974d5c2e2928dea5f71b9825b8b646686bd200;
     address constant LEND_ADDRESS = 0x80fB784B7eD66730e8b1DBd9820aFD29931aab03;
     address constant LINK_ADDRESS = 0x514910771AF9Ca656af840dff83E8264EcF986CA;
-    address constant MKR_ADDRESS = 0xAaF64BFCC32d0F15873a02163e7E500671a4ffcD;
+    address constant MKR_ADDRESS = 0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2;
     address constant SUSD_ADDRESS = 0x57Ab1ec28D129707052df4dF418D58a2D46d5f51;
     address constant DAI_ADDRESS = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address constant USDC_ADDRESS = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -203,21 +202,21 @@ contract Flashloan is ICallee, DydxFlashloanBase {
 
 
         } else { 
-          return; // this needs better solution 
+          revert(); // this needs better solution 
         }
 
 
         uint profit = token.balanceOf(address(this)) - arbInfo.repayAmount; 
         token.transfer(beneficiary, profit);
-        emit NewArbitrage(arbInfo.direction,arbInfo.tokenone, arbInfo.tokentwo, profit, now);
+        emit NewArbitrage(arbInfo.direction, arbInfo.tokenone, arbInfo.tokentwo, profit, now);
     }
 
     function initiateFlashloan(
       address _solo, 
-      address _token,         // injecting the proper address to flashloan (dai,usdc,weth)   no need for another enum
+      address _token,         // this must match tokenone   enum for flashloan coins from dydx USDC, DAI, WETH
       uint256 _amount, 
       Tokenone _tokenone,
-      Tokentwo _tokentwo,      //from enum for coins   BAT, KNC, LEND, LINK, MKR, SUSD
+      Tokentwo _tokentwo,      //from enum for coins   BAT, KNC, LEND, LINK, MKR, SUSD   <<== SHOULD WE DO MORE ?
       Direction _direction)    // added new directions  KyberTokenUniswap and UniswapTokenKyber
         external
     {
