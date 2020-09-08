@@ -37,15 +37,16 @@ contract Flashloan is ICallee, DydxFlashloanBase {
     IKyberNetworkProxy kyber;
     IUniswapV2Router02 uniswap;
     IWeth weth;  // doesn't play nice yet   i think this is used 
-    IERC20 public token;
-    IERC20 public token2;
+    IERC20 public srctoken;
+    IERC20 public desttoken;
+    
     address beneficiary;
     address constant KYBER_ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address constant BAT_ADDRESS = 0x0D8775F648430679A709E98d2b0Cb6250d2887EF;
-    address constant KNC_ADDRESS = 0xdd974d5c2e2928dea5f71b9825b8b646686bd200;
+    address constant KNC_ADDRESS = 0xdd974D5C2e2928deA5F71b9825b8b646686BD200;
     address constant LEND_ADDRESS = 0x80fB784B7eD66730e8b1DBd9820aFD29931aab03;
     address constant LINK_ADDRESS = 0x514910771AF9Ca656af840dff83E8264EcF986CA;
-    address constant MKR_ADDRESS = 0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2;
+    address constant MKR_ADDRESS = 0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2;
     address constant SUSD_ADDRESS = 0x57Ab1ec28D129707052df4dF418D58a2D46d5f51;
     address constant DAI_ADDRESS = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
     address constant USDC_ADDRESS = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
@@ -68,48 +69,50 @@ contract Flashloan is ICallee, DydxFlashloanBase {
         bytes memory data
     ) public {
         ArbInfo memory arbInfo = abi.decode(data, (ArbInfo));
-        uint256 balanceToken = token.balanceOf(address(this));
+        
        
         if (arbInfo.tokenone == Tokenone.USDC) {
-          token = IERC20(USDC_ADDRESS);
+          srctoken = IERC20(USDC_ADDRESS);
           } if (arbInfo.tokenone == Tokenone.DAI) {
-          token = IERC20(DAI_ADDRESS); 
+          srctoken = IERC20(DAI_ADDRESS); 
           } if (arbInfo.tokenone == Tokenone.WETH) {
-          token = IERC20(WETH_ADDRESS);
+          srctoken = IERC20(WETH_ADDRESS);
         }
          
 
         if (arbInfo.tokentwo == Tokentwo.BAT) {
-          token2 = IERC20(BAT_ADDRESS);
+          desttoken = IERC20(BAT_ADDRESS);
           } if (arbInfo.tokentwo == Tokentwo.KNC) {
-          token2 = IERC20(KNC_ADDRESS); 
+          desttoken = IERC20(KNC_ADDRESS); 
           } if (arbInfo.tokentwo == Tokentwo.LEND) {
-          token2 = IERC20(LEND_ADDRESS);
+          desttoken = IERC20(LEND_ADDRESS);
           } if (arbInfo.tokentwo == Tokentwo.LINK) {
-          token2 = IERC20(LINK_ADDRESS); 
+          desttoken = IERC20(LINK_ADDRESS); 
           } if (arbInfo.tokentwo == Tokentwo.MKR) {
-          token2 = IERC20(MKR_ADDRESS);
-          } else { token2 = IERC20(SUSD_ADDRESS);
-          }  
-        
-        uint256 balanceToken2 = token2.balanceOf(address(this));
+          desttoken = IERC20(MKR_ADDRESS);
+          } if (arbInfo.tokentwo == Tokentwo.SUSD) { 
+            desttoken == IERC20(SUSD_ADDRESS);
+            }  
+
+        uint256 srcqty = srctoken.balanceOf(address(this));
+        uint256 destqty = desttoken.balanceOf(address(this));
 
 
         if(arbInfo.direction == Direction.KyberToUniswap) {
           //Buy ETH on Kyber
-          token.approve(address(kyber), balanceToken); 
+          srctoken.approve(address(kyber), srcqty); 
           (uint expectedRate, ) = kyber.getExpectedRate(
-            token, 
+            srctoken, 
             IERC20(KYBER_ETH_ADDRESS), 
-            balanceToken
+            srcqty
           );
           
-          kyber.swapTokenToEther(token, balanceToken, expectedRate); //switched to swaptoken
+          kyber.swapTokenToEther(srctoken, (address(this).balance), expectedRate); //switched to swaptoken
 
           //Sell ETH on Uniswap
           address[] memory path = new address[](2);
           path[0] = address(weth);
-          path[1] = address(token);
+          path[1] = address(srctoken);
           uint[] memory minOuts = uniswap.getAmountsOut(address(this).balance - 2, path); 
           uniswap.swapExactETHForTokens.value(address(this).balance - 2)(
             minOuts[1], 
@@ -119,13 +122,13 @@ contract Flashloan is ICallee, DydxFlashloanBase {
           );
         } if(arbInfo.direction == Direction.UniswapToKyber) {
           //Buy ETH on Uniswap
-          token.approve(address(uniswap), balanceToken); 
+          srctoken.approve(address(uniswap), srcqty); 
           address[] memory path = new address[](2);
-          path[0] = address(token);
+          path[0] = address(srctoken);
           path[1] = address(weth);
-          uint[] memory minOuts = uniswap.getAmountsOut(balanceToken, path); 
+          uint[] memory minOuts = uniswap.getAmountsOut(srcqty, path); 
           uniswap.swapExactTokensForETH(
-            balanceToken, 
+            srcqty, 
             minOuts[1], 
             path, 
             address(this), 
@@ -135,34 +138,34 @@ contract Flashloan is ICallee, DydxFlashloanBase {
           //Sell ETH on Kyber
           (uint expectedRate, ) = kyber.getExpectedRate(
             IERC20(KYBER_ETH_ADDRESS), 
-            token, 
+            srctoken, 
             address(this).balance
           );
           kyber.swapEtherToToken.value(address(this).balance)(
-            token, 
+            srctoken, 
             expectedRate
           );
         } 
         
         if(arbInfo.direction == Direction.KyberTokenUniswap){
               //Buy TOKEN on Kyber
-          token.approve(address(kyber), balanceToken); 
+          srctoken.approve(address(kyber), srcqty); 
           (uint expectedRate, ) = kyber.getExpectedRate(
-            token, 
-            token2, 
-            balanceToken
+            srctoken, 
+            desttoken, 
+            srcqty
           );
           
-          kyber.swapTokenToToken(token, balanceToken, token2, expectedRate); //switched to swaptoken
+          uint destAmount = kyber.swapTokenToToken(srctoken, srcqty, desttoken, expectedRate); //switched to swaptoken
 
           //Sell TOKEN on Uniswap
-          token2.approve(address(uniswap), balanceToken2);  // token approve needed for 2nd token on token to token exchange
+          desttoken.approve(address(uniswap), destAmount);  // srctoken approve needed for 2nd srctoken on srctoken to srctoken exchange
           address[] memory path = new address[](2);
-          path[0] = address(token2);
-          path[1] = address(token);
-          uint[] memory minOuts = uniswap.getAmountsOut(balanceToken2, path); 
+          path[0] = address(desttoken);
+          path[1] = address(srctoken);
+          uint[] memory minOuts = uniswap.getAmountsOut(destAmount, path); 
           uniswap.swapExactTokensForTokens(
-            balanceToken2,
+            destAmount,
             minOuts[1], 
             path, 
             address(this), 
@@ -171,13 +174,13 @@ contract Flashloan is ICallee, DydxFlashloanBase {
 
         }  if(arbInfo.direction == Direction.UniswapTokenKyber) {
 
-          token.approve(address(uniswap), balanceToken); 
+          srctoken.approve(address(uniswap), srcqty); 
           address[] memory path = new address[](2);
-          path[0] = address(token);
-          path[1] = address(token2);
-          uint[] memory minOuts = uniswap.getAmountsOut(balanceToken, path); 
-          uniswap.swapExactTokensForTokens(
-            balanceToken, 
+          path[0] = address(srctoken);
+          path[1] = address(desttoken);
+          uint[] memory minOuts = uniswap.getAmountsOut(srcqty, path); 
+           uint[] memory Amounts = uniswap.swapExactTokensForTokens(
+            srcqty, 
             minOuts[1], 
             path, 
             address(this), 
@@ -185,16 +188,16 @@ contract Flashloan is ICallee, DydxFlashloanBase {
           );
 
           //Sell Token on Kyber
-          token2.approve(address(kyber), balanceToken2);
+          desttoken.approve(address(kyber), Amounts[0]);
           (uint expectedRate, ) = kyber.getExpectedRate(
-            token2, 
-            token, 
-            balanceToken2
+            desttoken, 
+            srctoken, 
+            Amounts[0]
           );
           kyber.swapTokenToToken(
-            token2, 
-            balanceToken2,
-            token,
+            desttoken, 
+            Amounts[0],
+            srctoken,
             expectedRate
           );
 
@@ -206,8 +209,8 @@ contract Flashloan is ICallee, DydxFlashloanBase {
         }
 
 
-        uint profit = token.balanceOf(address(this)) - arbInfo.repayAmount; 
-        token.transfer(beneficiary, profit);
+        uint profit = address(srctoken).balance - arbInfo.repayAmount; 
+        srctoken.transfer(beneficiary, profit);
         emit NewArbitrage(arbInfo.direction, arbInfo.tokenone, arbInfo.tokentwo, profit, now);
     }
 
@@ -222,7 +225,7 @@ contract Flashloan is ICallee, DydxFlashloanBase {
     {
         ISoloMargin solo = ISoloMargin(_solo);
 
-        // Get marketId from token address
+        // Get marketId from srctoken address
         uint256 marketId = _getMarketIdFromTokenAddress(_solo, _token);
 
         // Calculate repay amount (_amount + (2 wei))
