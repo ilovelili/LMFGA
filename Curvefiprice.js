@@ -2,6 +2,7 @@ mport { legos } from "@studydefi/money-legos";
 const { curvefi, erc20 } = legos;
 
 // Addresses can be found here
+//  https://www.curve.fi/contracts
 
 // Curve finance cDai and cUSDC contract
 const curveFicDU = new ethers.Contract(
@@ -9,7 +10,7 @@ const curveFicDU = new ethers.Contract(
   curvefi.curveAbi,
   wallet
 );
-
+ 
 //Pricing  
 
 
