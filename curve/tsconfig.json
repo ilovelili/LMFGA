@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "commonjs",
+    "lib": ["es2015", "dom"],
+    "noImplicitAny": false,
+    "declaration": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    // "rootDir": ".",
+    "skipLibCheck": true,
+    "allowJs": true
+  },
+  "include": ["addresses", "./*.ts", "getSwapReturnAmount.js"],
+  "exclude": ["node_modules"]
+}

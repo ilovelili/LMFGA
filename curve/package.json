@@ -1,0 +1,29 @@
+{
+  "name": "curve",
+  "version": "1.0.0",
+  "description": "",
+  "main": "getSwaoReturbAmount.js",
+  "scripts": {
+    "generate-types": "typechain --target=ethers-v5 'build/contracts/*.json'",
+    "start": "ts-node ./getSwapReturnAmount.ts",
+    "fork": "ganache-cli --fork https://mainnet.infura.io/v3/<<infura project id>> --account='<<private key>>,1000000000000000000000'",
+    "deploy:fork": "truffle migrate --reset --network mainnetFork",
+    "deploy:testnet": "truffle migrate --reset --network testnet",
+    "deploy:mainnet": "truffle migrate --reset --network mainnet",
+    "test": "jest --detectOpenHandles",
+    "docker:build": "docker build -t flashloan .",
+    "docker:run": "docker run flashloan",
+    "build": "tsc",
+    "dev": "nodemon -x ts-node src/run-arbitrage.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@extra-array/linspace": "^2.3.18",
+    "@studydefi/money-legos": "^2.3.7",
+    "dotenv": "^8.2.0",
+    "ethers": "^5.0.8",
+    "web3": "^1.2.11"
+  }
+}
