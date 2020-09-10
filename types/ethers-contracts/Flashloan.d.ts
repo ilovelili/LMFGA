@@ -22,7 +22,8 @@ import { FunctionFragment, EventFragment, Result } from "@ethersproject/abi";
 interface FlashloanInterface extends ethers.utils.Interface {
   functions: {
     "callFunction(address,tuple,bytes)": FunctionFragment;
-    "initateFlashLoan(address,address,uint256,uint8)": FunctionFragment;
+    "initateFlashLoan(address,address,address,uint256,uint8)": FunctionFragment;
+    "initateFlashLoan1(address,address,address,uint256,uint8)": FunctionFragment;
   };
 
   encodeFunctionData(
@@ -31,7 +32,11 @@ interface FlashloanInterface extends ethers.utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "initateFlashLoan",
-    values: [string, string, BigNumberish, BigNumberish]
+    values: [string, string, string, BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "initateFlashLoan1",
+    values: [string, string, string, BigNumberish, BigNumberish]
   ): string;
 
   decodeFunctionResult(
@@ -42,9 +47,13 @@ interface FlashloanInterface extends ethers.utils.Interface {
     functionFragment: "initateFlashLoan",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "initateFlashLoan1",
+    data: BytesLike
+  ): Result;
 
   events: {
-    "NewArbitrage(uint8,uint256,uint256)": EventFragment;
+    "NewArbitrage(uint256,uint256)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "NewArbitrage"): EventFragment;
@@ -80,15 +89,35 @@ export class Flashloan extends Contract {
 
     initateFlashLoan(
       _solo: string,
-      _token: string,
+      _tokenFrom: string,
+      _tokenTo: string,
       _amount: BigNumberish,
       _direction: BigNumberish,
       overrides?: Overrides
     ): Promise<ContractTransaction>;
 
-    "initateFlashLoan(address,address,uint256,uint8)"(
+    "initateFlashLoan(address,address,address,uint256,uint8)"(
       _solo: string,
-      _token: string,
+      _tokenFrom: string,
+      _tokenTo: string,
+      _amount: BigNumberish,
+      _direction: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    initateFlashLoan1(
+      _solo: string,
+      _tokenFrom: string,
+      _tokenTo: string,
+      _amount: BigNumberish,
+      _direction: BigNumberish,
+      overrides?: Overrides
+    ): Promise<ContractTransaction>;
+
+    "initateFlashLoan1(address,address,address,uint256,uint8)"(
+      _solo: string,
+      _tokenFrom: string,
+      _tokenTo: string,
       _amount: BigNumberish,
       _direction: BigNumberish,
       overrides?: Overrides
@@ -111,15 +140,35 @@ export class Flashloan extends Contract {
 
   initateFlashLoan(
     _solo: string,
-    _token: string,
+    _tokenFrom: string,
+    _tokenTo: string,
     _amount: BigNumberish,
     _direction: BigNumberish,
     overrides?: Overrides
   ): Promise<ContractTransaction>;
 
-  "initateFlashLoan(address,address,uint256,uint8)"(
+  "initateFlashLoan(address,address,address,uint256,uint8)"(
     _solo: string,
-    _token: string,
+    _tokenFrom: string,
+    _tokenTo: string,
+    _amount: BigNumberish,
+    _direction: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  initateFlashLoan1(
+    _solo: string,
+    _tokenFrom: string,
+    _tokenTo: string,
+    _amount: BigNumberish,
+    _direction: BigNumberish,
+    overrides?: Overrides
+  ): Promise<ContractTransaction>;
+
+  "initateFlashLoan1(address,address,address,uint256,uint8)"(
+    _solo: string,
+    _tokenFrom: string,
+    _tokenTo: string,
     _amount: BigNumberish,
     _direction: BigNumberish,
     overrides?: Overrides
@@ -142,15 +191,35 @@ export class Flashloan extends Contract {
 
     initateFlashLoan(
       _solo: string,
-      _token: string,
+      _tokenFrom: string,
+      _tokenTo: string,
       _amount: BigNumberish,
       _direction: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    "initateFlashLoan(address,address,uint256,uint8)"(
+    "initateFlashLoan(address,address,address,uint256,uint8)"(
       _solo: string,
-      _token: string,
+      _tokenFrom: string,
+      _tokenTo: string,
+      _amount: BigNumberish,
+      _direction: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    initateFlashLoan1(
+      _solo: string,
+      _tokenFrom: string,
+      _tokenTo: string,
+      _amount: BigNumberish,
+      _direction: BigNumberish,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "initateFlashLoan1(address,address,address,uint256,uint8)"(
+      _solo: string,
+      _tokenFrom: string,
+      _tokenTo: string,
       _amount: BigNumberish,
       _direction: BigNumberish,
       overrides?: CallOverrides
@@ -159,7 +228,6 @@ export class Flashloan extends Contract {
 
   filters: {
     NewArbitrage(
-      direction: BigNumberish | null,
       profit: BigNumberish | null,
       date: BigNumberish | null
     ): EventFilter;
@@ -182,15 +250,35 @@ export class Flashloan extends Contract {
 
     initateFlashLoan(
       _solo: string,
-      _token: string,
+      _tokenFrom: string,
+      _tokenTo: string,
       _amount: BigNumberish,
       _direction: BigNumberish,
       overrides?: Overrides
     ): Promise<BigNumber>;
 
-    "initateFlashLoan(address,address,uint256,uint8)"(
+    "initateFlashLoan(address,address,address,uint256,uint8)"(
       _solo: string,
-      _token: string,
+      _tokenFrom: string,
+      _tokenTo: string,
+      _amount: BigNumberish,
+      _direction: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    initateFlashLoan1(
+      _solo: string,
+      _tokenFrom: string,
+      _tokenTo: string,
+      _amount: BigNumberish,
+      _direction: BigNumberish,
+      overrides?: Overrides
+    ): Promise<BigNumber>;
+
+    "initateFlashLoan1(address,address,address,uint256,uint8)"(
+      _solo: string,
+      _tokenFrom: string,
+      _tokenTo: string,
       _amount: BigNumberish,
       _direction: BigNumberish,
       overrides?: Overrides
@@ -214,15 +302,35 @@ export class Flashloan extends Contract {
 
     initateFlashLoan(
       _solo: string,
-      _token: string,
+      _tokenFrom: string,
+      _tokenTo: string,
       _amount: BigNumberish,
       _direction: BigNumberish,
       overrides?: Overrides
     ): Promise<PopulatedTransaction>;
 
-    "initateFlashLoan(address,address,uint256,uint8)"(
+    "initateFlashLoan(address,address,address,uint256,uint8)"(
       _solo: string,
-      _token: string,
+      _tokenFrom: string,
+      _tokenTo: string,
+      _amount: BigNumberish,
+      _direction: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    initateFlashLoan1(
+      _solo: string,
+      _tokenFrom: string,
+      _tokenTo: string,
+      _amount: BigNumberish,
+      _direction: BigNumberish,
+      overrides?: Overrides
+    ): Promise<PopulatedTransaction>;
+
+    "initateFlashLoan1(address,address,address,uint256,uint8)"(
+      _solo: string,
+      _tokenFrom: string,
+      _tokenTo: string,
       _amount: BigNumberish,
       _direction: BigNumberish,
       overrides?: Overrides

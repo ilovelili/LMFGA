@@ -6,9 +6,9 @@ module.exports = function (deployer, _network, [beneficiaryAddress, _]) {
   deployer.deploy(
     Flashloan,
     addresses.kyber.kyberNetworkProxy,
+    addresses.curvefi.curvefi,
     addresses.uniswap.router,
     addresses.tokens.weth,
-    addresses.tokens.dai,
     beneficiaryAddress
   );
 };

@@ -25,8 +25,18 @@ export class Util {
   static Address = class {
     // to checksum address
     static daiAddress = ethers.utils.getAddress(addresses.tokens.dai);
+    static usdtAddress = ethers.utils.getAddress(addresses.tokens.usdt);
+    static usdcAddress = ethers.utils.getAddress(addresses.tokens.usdc);
     static wethAddress = ethers.utils.getAddress(addresses.tokens.weth);
     static ethAddress = ethers.utils.getAddress(addresses.tokens.eth);
     static soloMarginAddress = ethers.utils.getAddress(addresses.dydx.solo);
+  };
+
+  static Decimals = class {
+    static daiDecimals = 18;
+    static usdtDecimals = 6;
+    static usdcDecimals = 6;
+    static wethDecimals = 18;
+    static ethDecimals = 18;
   };
 }

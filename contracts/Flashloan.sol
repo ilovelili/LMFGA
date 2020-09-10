@@ -4,6 +4,7 @@ pragma experimental ABIEncoderV2;
 
 import "@studydefi/money-legos/dydx/contracts/DydxFlashloanBase.sol";
 import "@studydefi/money-legos/dydx/contracts/ICallee.sol";
+import "@studydefi/money-legos/curvefi/contracts/ICurveFiCurve.sol";
 import {KyberNetworkProxy as IKyberNetworkProxy} from "@studydefi/money-legos/kyber/contracts/KyberNetworkProxy.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -12,34 +13,37 @@ import "./IWeth.sol";
 
 contract Flashloan is ICallee, DydxFlashloanBase {
   enum Direction {KyberToUniswap, UniswapToKyber}
+
   struct ArbInfo {
-    Direction direction;
+    address from;
+    address to;
+    uint256 amount;
     uint256 repayAmount;
   }
 
-  event NewArbitrage(Direction indexed direction, uint256 indexed profit, uint256 indexed date);
+  event NewArbitrage(uint256 indexed profit, uint256 indexed date);
 
   // events for debugging
   // event GetMinOuts(uint256 indexed minOut1, uint256 indexed minOut2);
 
+  ICurveFiCurve curvefi;
   IKyberNetworkProxy kyber;
   IUniswapV2Router02 uniswap;
   IWeth weth;
-  IERC20 dai;
   address beneficiary;
   address constant KYBER_ETH_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
   constructor(
     address kyberAddress,
+    address curvefiAddress,
     address uniswapAddress,
     address wethAddress,
-    address daiAddress,
     address beneficiaryAddress
   ) public {
     kyber = IKyberNetworkProxy(kyberAddress);
+    curvefi = ICurveFiCurve(curvefiAddress);
     uniswap = IUniswapV2Router02(uniswapAddress);
     weth = IWeth(wethAddress);
-    dai = IERC20(daiAddress);
     beneficiary = beneficiaryAddress;
   }
 
@@ -51,63 +55,62 @@ contract Flashloan is ICallee, DydxFlashloanBase {
     bytes memory data
   ) public {
     ArbInfo memory arbInfo = abi.decode(data, (ArbInfo));
-    uint256 balanceDai = dai.balanceOf(address(this));
+
+    // fromToken to ETH
+    IERC20 fromToken = IERC20(arbInfo.from);
+    uint256 fromBalance = fromToken.balanceOf(address(this));
     uint256 deadline = now + 300;
 
-    if (arbInfo.direction == Direction.KyberToUniswap) {
-      // Buy ETH from Kyber
-      require(dai.approve(address(kyber), balanceDai), "Could not approve reserve asset sell!");
-      (uint256 expectedRate, ) = kyber.getExpectedRate(dai, IERC20(KYBER_ETH_ADDRESS), balanceDai);
-      kyber.swapTokenToEther(dai, balanceDai, expectedRate);
+    require(fromToken.approve(address(uniswap), fromBalance), "Could not approve reserve asset sell!");
+    address[] memory path = new address[](2);
+    path[0] = address(fromToken);
+    path[1] = address(weth);
+    uint256[] memory minOuts = uniswap.getAmountsOut(fromBalance, path);
+    uniswap.swapExactTokensForETH(fromBalance, minOuts[1], path, address(this), deadline);
 
-      // Sell ETH to Uniswap
-      address[] memory path = new address[](2);
-      path[0] = address(weth);
-      path[1] = address(dai);
+    // ETH to toToken
+    // Sell ETH to Uniswap
+    IERC20 toToken = IERC20(arbInfo.to);
+    address[] memory path2 = new address[](2);
+    path2[0] = address(weth);
+    path2[1] = address(toToken);
 
-      // https://uniswap.org/docs/v2/smart-contracts/library#getamountsout
-      // Given an input asset amount and an array of token addresses, calculates all subsequent maximum output token amounts
-      uint256[] memory minOuts = uniswap.getAmountsOut(address(this).balance, path);
+    // https://uniswap.org/docs/v2/smart-contracts/library#getamountsout
+    // Given an input asset amount and an array of token addresses, calculates all subsequent maximum output token amounts
+    uint256[] memory minOuts2 = uniswap.getAmountsOut(address(this).balance, path2);
 
-      // https://uniswap.org/docs/v2/smart-contracts/router02/
-      // Swaps an exact amount of ETH for as many output tokens as possible, along the route determined by the path.
-      // The first element of path must be WETH, the last is the output token
-      uniswap.swapExactETHForTokens.value(address(this).balance)(minOuts[1], path, address(this), deadline);
-    } else {
-      // Buy ETH from Uniswap
-      require(dai.approve(address(uniswap), balanceDai), "Could not approve reserve asset sell!");
-      address[] memory path = new address[](2);
-      path[0] = address(dai);
-      path[1] = address(weth);
-      uint256[] memory minOuts = uniswap.getAmountsOut(balanceDai, path);
-      uniswap.swapExactTokensForETH(balanceDai, minOuts[1], path, address(this), deadline);
-      // Sell ETH to Kyber
-      (uint256 expectedRate, ) = kyber.getExpectedRate(IERC20(KYBER_ETH_ADDRESS), dai, address(this).balance);
-      kyber.swapEtherToToken.value(address(this).balance)(dai, expectedRate);
-    }
+    // https://uniswap.org/docs/v2/smart-contracts/router02/
+    // Swaps an exact amount of ETH for as many output tokens as possible, along the route determined by the path.
+    // The first element of path must be WETH, the last is the output token
+    uniswap.swapExactETHForTokens.value(address(this).balance)(minOuts2[1], path2, address(this), deadline);
 
-    balanceDai = dai.balanceOf(address(this));
-    require(balanceDai - arbInfo.repayAmount >= 0, "Not enough funds to repay dydx loan!");
+    uint256 toBalance = toToken.balanceOf(address(this));
+    require(toToken.approve(address(kyber), toBalance), "Could not approve reserve asset sell!");
+    curvefi.exchange_underlying(1, 0, toBalance, 0); // 2: USDT, 1: USDC, 0: DAI
 
-    uint256 profit = balanceDai - arbInfo.repayAmount;
-    require(dai.transfer(beneficiary, profit), "Could not transfer back the profit!");
+    uint256 finalFromTokenBalance = fromToken.balanceOf(address(this));
+    require(finalFromTokenBalance > arbInfo.repayAmount, "Not enough funds to repay dydx loan!");
 
-    emit NewArbitrage(arbInfo.direction, profit, now);
+    uint256 profit = finalFromTokenBalance - arbInfo.repayAmount;
+    require(fromToken.transfer(beneficiary, profit), "Could not transfer back the profit!");
+
+    emit NewArbitrage(profit, now);
   }
 
   function initateFlashLoan(
     address _solo,
-    address _token,
+    address _tokenFrom,
+    address _tokenTo,
     uint256 _amount,
     Direction _direction
   ) external {
     // Get marketId from token address
-    uint256 marketId = _getMarketIdFromTokenAddress(_solo, _token);
+    uint256 marketId = _getMarketIdFromTokenAddress(_solo, _tokenFrom);
 
     // Calculate repay amount (_amount + (2 wei))
     // Approve transfer from
     uint256 repayAmount = _getRepaymentAmountInternal(_amount);
-    IERC20(_token).approve(_solo, repayAmount);
+    IERC20(_tokenFrom).approve(_solo, repayAmount);
 
     // 1. Withdraw $
     // 2. Call callFunction(...)
@@ -117,7 +120,8 @@ contract Flashloan is ICallee, DydxFlashloanBase {
     operations[0] = _getWithdrawAction(marketId, _amount);
     operations[1] = _getCallAction(
       // Encode MyCustomData for callFunction
-      abi.encode(ArbInfo({direction: _direction, repayAmount: repayAmount}))
+      
+      abi.encode(ArbInfo({from: _tokenFrom, to: _tokenTo, amount: _amount, repayAmount: repayAmount}))
     );
     operations[2] = _getDepositAction(marketId, repayAmount);
 

@@ -13,21 +13,16 @@ export class Price {
   constructor(public buy: number, public sell: number) {}
 
   // fetch uniswap buy / sell rate
-  static FetchUniswapRates = async (ethPrice: number, amount_eth = Util.Config.amount_eth): Promise<Price> => {
-    const amount_eth_wei = ethers.utils.parseEther(amount_eth.toString()).toString();
-    const amount_dai_wei = ethers.utils.parseEther((amount_eth * ethPrice).toString()).toString();
-
-    const DAI = new Token(ChainId.MAINNET, daiAddress, 18);
-    const daiWeth = await Fetcher.fetchPairData(DAI, WETH[DAI.chainId]);
+  static FetchUniswapRates = async (token: Token, amount_eth_wei: string, amount_stabletoken_wei: string): Promise<Price> => {
+    const daiWeth = await Fetcher.fetchPairData(token, WETH[token.chainId]);
 
     // weth to dai
-    const wethToDaiRoute = new Route([daiWeth], WETH[DAI.chainId]);
+    const wethToStableRoute = new Route([daiWeth], WETH[token.chainId]);
     // dai to weth
-    const daiToWethRoute = new Route([daiWeth], DAI);
-
+    const stableToWethRoute = new Route([daiWeth], token);
     const uniswapResults = await Promise.all([
-      new Trade(daiToWethRoute, new TokenAmount(DAI, amount_dai_wei), TradeType.EXACT_INPUT),
-      new Trade(wethToDaiRoute, new TokenAmount(WETH[DAI.chainId], amount_eth_wei), TradeType.EXACT_INPUT),
+      new Trade(stableToWethRoute, new TokenAmount(token, amount_stabletoken_wei), TradeType.EXACT_INPUT),
+      new Trade(wethToStableRoute, new TokenAmount(WETH[token.chainId], amount_eth_wei), TradeType.EXACT_INPUT),
     ]);
 
     return {
@@ -40,34 +35,31 @@ export class Price {
   };
 
   // fetch kyber buy / sell rate
-  static FetchKyberRates1 = async (amount_eth = Util.Config.amount_eth): Promise<Price> => {
+  static FetchKyberRates1 = async (fromContract: string, toContract: string, amount: number): Promise<Price> => {
     const [buy, sell] = await Promise.all([
-      Price.fetchKyberPriceByAction(Action.Buy, amount_eth),
-      Price.fetchKyberPriceByAction(Action.Sell, amount_eth),
+      Price.fetchKyberPriceByAction(fromContract, toContract, Action.Buy, amount),
+      Price.fetchKyberPriceByAction(fromContract, toContract, Action.Sell, amount),
     ]);
     return new Price(buy, sell);
   };
 
-  static FetchKyberRates2 = async (amount_eth = Util.Config.amount_eth): Promise<Price> => {
+  static FetchKyberRates2 = async (fromContract: string, toContract: string, amount: number): Promise<Price> => {
     const [buy, sell] = await Promise.all([
-      Price.fetchKyberPriceByAction(Action.Buy, amount_eth, 8),
-      Price.fetchKyberPriceByAction(Action.Sell, amount_eth, 8),
+      Price.fetchKyberPriceByAction(fromContract, toContract, Action.Buy, amount, 8),
+      Price.fetchKyberPriceByAction(fromContract, toContract, Action.Sell, amount, 8),
     ]);
     return new Price(buy, sell);
   };
 
   static FetchKyberRates3 = async (
     provider: ethers.providers.Provider,
-    ethPrice: number,
-    amount_eth = Util.Config.amount_eth
+    fromContract: string, toContract: string, fromAmountInWei: string, toAmountInWei: string,
   ): Promise<Price> => {
     const kyber = KyberNetworkProxyFactory.connect(addresses.kyber.kyberNetworkProxy, provider);
-    const amount_eth_wei = ethers.utils.parseEther(amount_eth.toString()).toString();
-    const amount_dai_wei = ethers.utils.parseEther((amount_eth * ethPrice).toString()).toString();
 
     const kyberResults = await Promise.all([
-      kyber.getExpectedRate(daiAddress, ethAddress, amount_dai_wei),
-      kyber.getExpectedRate(ethAddress, daiAddress, amount_eth_wei),
+      kyber.getExpectedRate(fromContract, toContract, fromAmountInWei),
+      kyber.getExpectedRate(toContract, fromContract, toAmountInWei),
     ]);
 
     return new Price(
@@ -77,12 +69,12 @@ export class Price {
   };
 
   // private function to fetch kyber buy / sell rate
-  static fetchKyberPriceByAction = async (type: Action, amount_eth: number, platformFee = 0): Promise<number> => {
+  static fetchKyberPriceByAction = async (fromContract: string, toContract: string, type: Action, amount: number, platformFee = 0): Promise<number> => {
     const fetch = isNode ? nodeFetch : window.fetch;
-    const endpoint = `https://api.kyber.network/quote_amount?base=${ethAddress}&quote=${daiAddress}&base_amount=${amount_eth}&type=${type}&platformFee=${platformFee}`;
+    const endpoint = `https://api.kyber.network/quote_amount?base=${fromContract}&quote=${toContract}&base_amount=${amount}&type=${type}&platformFee=${platformFee}`;
     const response = await fetch(endpoint);
     const result = await response.json();
-    return result.data / amount_eth;
+    return result.data / amount;
   };
 
   static getEtherPrice = async (provider: ethers.providers.Provider) => {
