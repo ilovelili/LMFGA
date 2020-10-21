@@ -48,6 +48,10 @@ yarn fetch-price
 
 `https://developer.kyber.network/docs/Environments-Kovan/`
 
+## Balancer Address
+
+`https://docs.balancer.finance/smart-contracts/addresses`
+
 ## Token Address
 
 `https://changelog.makerdao.com/`

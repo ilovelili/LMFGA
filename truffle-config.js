@@ -14,6 +14,7 @@ module.exports = {
       network_id: 1,
       gasPrice: ethers.utils.parseUnits("50", "gwei").toString(),
       gas: 6000000,
+      timeoutBlocks: 200,
     },
     testnet: {
       networkCheckTimeout: 10000,

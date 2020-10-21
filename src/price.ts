@@ -11,6 +11,10 @@ const maxRetry = Util.Config.useTestnet ? 1 : 3;
 export class Price {
   constructor(public buy: number, public sell: number) {}
 
+  static FetchBalancerOutput = async (tokenSrc: TokenConfig, tokenDest: TokenConfig, retry = 0): Promise<number> => {
+    return 0;
+  };
+
   // fetch uniswap output amount
   static FetchUniswapOutput = async (tokenSrc: TokenConfig, tokenDest: TokenConfig, retry = 0): Promise<number> => {
     if (retry >= maxRetry) {

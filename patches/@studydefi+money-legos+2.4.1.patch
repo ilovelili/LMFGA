@@ -1,0 +1,73 @@
+diff --git a/node_modules/@studydefi/money-legos/balancer/contracts/ExchangeProxy.sol b/node_modules/@studydefi/money-legos/balancer/contracts/ExchangeProxy.sol
+index e2f9374..4da3ec4 100644
+--- a/node_modules/@studydefi/money-legos/balancer/contracts/ExchangeProxy.sol
++++ b/node_modules/@studydefi/money-legos/balancer/contracts/ExchangeProxy.sol
+@@ -1,45 +1,53 @@
+ pragma solidity ^0.5.0;
++pragma experimental ABIEncoderV2;
+ 
+-
+-interface ExchangeProxy {
++interface IExchangeProxy {
++    struct Swap {
++        address pool;
++        uint    tokenInParam; // tokenInAmount / maxAmountIn / limitAmountIn
++        uint    tokenOutParam; // minAmountOut / tokenAmountOut / limitAmountOut
++        uint    maxPrice;
++    }
+ 
+     function batchSwapExactIn(
+-        Swap[] memory swaps,
++        Swap[] calldata swaps,
+         address tokenIn,
+         address tokenOut,
+         uint totalAmountIn,
+         uint minTotalAmountOut
+-    ) public returns (uint totalAmountOut);
++    ) external returns (uint totalAmountOut);
+     
+     function batchSwapExactOut(
+-        Swap[] memory swaps,
++        Swap[] calldata swaps,
+         address tokenIn,
+         address tokenOut,
+         uint maxTotalAmountIn
+-    ) public returns (uint totalAmountIn);
++    ) external returns (uint totalAmountIn);
+     
+     function batchEthInSwapExactIn(
+-        Swap[] memory swaps,
++        Swap[] calldata swaps,
+         address tokenOut,
+         uint minTotalAmountOut
+-    ) public payable returns (uint totalAmountOut);
++    ) external payable returns (uint totalAmountOut);
+     
+     function batchEthOutSwapExactIn(
+-        Swap[] memory swaps,
++        Swap[] calldata swaps,
+         address tokenIn,
+         uint totalAmountIn,
+         uint minTotalAmountOut
+-    ) public returns (uint totalAmountOut);
++    ) external returns (uint totalAmountOut);
+     
+     function batchEthInSwapExactOut(
+-        Swap[] memory swaps,
++        Swap[] calldata swaps,
+         address tokenOut
+-    ) public payable returns (uint totalAmountIn);
++    ) external payable returns (uint totalAmountIn);
+     
+     function batchEthOutSwapExactOut(
+-        Swap[] memory swaps,
++        Swap[] calldata swaps,
+         address tokenIn,
+         uint maxTotalAmountIn
+-    ) public returns (uint totalAmountIn);
++    ) external returns (uint totalAmountIn);
+     
+ }
++
++contract ExchangeProxy is IExchangeProxy {}
+\ No newline at end of file

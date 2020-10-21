@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: ISC
 // todo: gas token
-// todo: curve.fi integration
 pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
 import "@studydefi/money-legos/dydx/contracts/DydxFlashloanBase.sol";
 import "@studydefi/money-legos/dydx/contracts/ICallee.sol";
 import {KyberNetworkProxy as IKyberNetworkProxy} from "@studydefi/money-legos/kyber/contracts/KyberNetworkProxy.sol";
+import {ExchangeProxy as IBalancerProxy} from "@studydefi/money-legos/balancer/contracts/ExchangeProxy.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IUniswapV2Router02.sol";

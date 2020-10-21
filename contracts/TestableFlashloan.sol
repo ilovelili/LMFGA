@@ -40,12 +40,12 @@ contract TestableFlashloan is ICallee, DydxFlashloanBase {
   constructor(
     address kyberAddress,
     address uniswapAddress,
-    address wethAddress,    
+    address wethAddress,
     address beneficiaryAddress
   ) public {
     kyber = IKyberNetworkProxy(kyberAddress);
     uniswap = IUniswapV2Router02(uniswapAddress);
-    weth = IWeth(wethAddress);    
+    weth = IWeth(wethAddress);
     beneficiary = beneficiaryAddress;
   }
 
@@ -63,10 +63,10 @@ contract TestableFlashloan is ICallee, DydxFlashloanBase {
     uint256 balanceSrc = token1.balanceOf(address(this));
     uint256 deadline = block.timestamp + 300; // add 300 millisec buffer time just in case it exceeds trading deadline
 
-    // trigger    
+    // trigger
     emit GetBalanceSrc(balanceSrc);
-    emit GetDirection(arbInfo.direction);   
-    
+    emit GetDirection(arbInfo.direction);
+
     require(
       arbInfo.direction == Direction.KyberToUniswap ||
         arbInfo.direction == Direction.UniswapToKyber ||
@@ -144,7 +144,7 @@ contract TestableFlashloan is ICallee, DydxFlashloanBase {
       (uint256 expectedRate, ) = kyber.getExpectedRate(token2, token1, balanceDest);
       emit GetKyberExpectedRate(expectedRate);
       kyber.swapTokenToToken(token2, balanceDest, token1, expectedRate);
-    }    
+    }
 
     uint256 balance = token1.balanceOf(address(this));
     uint256 repayAmount = arbInfo.repayAmount;
@@ -156,7 +156,7 @@ contract TestableFlashloan is ICallee, DydxFlashloanBase {
     uint256 profit = balance - arbInfo.repayAmount;
     require(token1.transfer(beneficiary, profit), "Could not transfer back the profit!");
 
-    emit NewArbitrage(arbInfo.direction, arbInfo.token1, arbInfo.token2, profit, now);    
+    emit NewArbitrage(arbInfo.direction, arbInfo.token1, arbInfo.token2, profit, now);
   }
 
   function initateFlashLoan(
@@ -173,7 +173,7 @@ contract TestableFlashloan is ICallee, DydxFlashloanBase {
     // Approve transfer from
     uint256 repayAmount = _getRepaymentAmountInternal(_amount);
     IERC20(_token1).approve(_solo, repayAmount);
-    
+
     // 1. Withdraw $
     // 2. Call callFunction(...)
     // 3. Deposit back $
